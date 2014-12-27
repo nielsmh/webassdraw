@@ -195,17 +195,15 @@ var modalbackground = new (function() {
   var bg = document.createElement("div");
   bg.id = "modalbackground";
 
-  var body = document.getElementById("body");
-
   var cancelfunction = null;
 
   this.show = function(show, onCancel) {
     if (show || typeof show == "undefined") {
-      body.appendChild(bg);
+      document.body.appendChild(bg);
       cancelfunction = onCancel;
     }
     else {
-      body.removeChild(bg);
+      document.body.removeChild(bg);
       cancelfunction = null;
     }
   };
