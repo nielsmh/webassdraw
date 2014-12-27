@@ -169,6 +169,7 @@ Drawing.Shape.prototype.draw = function (ctx, doClose) {
 // Painting the drawing and widgets on the canvas
 
 function repaint() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, thecanvas.width, thecanvas.height);
 
