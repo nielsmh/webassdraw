@@ -38,6 +38,27 @@
   font-size: 10px;
   margin: 5px 10px;
 }
+#sidebarmenu>.toolbar {
+}
+#sidebarmenu a.toolbutton {
+  display: inline-block;
+  border: 1px solid transparent;
+  width: 24px;
+  height: 24px;
+  background: #666;
+  cursor: pointer;
+  vertical-align: middle;
+  line-height: 24px;
+  font-weight: 900;
+}
+#sidebarmenu a.toolbutton.active {
+  border-color: #999;
+  background: #777;
+}
+#sidebarmenu a.toolbutton:hover {
+  border: 1px solid #ddd;
+  background: #888;
+}
 
 #canvascontainer {
   position: fixed;

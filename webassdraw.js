@@ -229,6 +229,7 @@ function PanTool() {
   var panstart = null;
 
   this.name = "Pan";
+  this.id = "pan";
   this.icon = "P";
 
   this.init = function() {
@@ -276,6 +277,7 @@ function MoveShapeTool() {
   var dragstart = null;
 
   this.name = "Move shape";
+  this.id = "moveshape";
   this.icon = "D";
 
   this.init = function() {
@@ -303,10 +305,36 @@ function MoveShapeTool() {
   }
 }
 
+function CreateShapeTool() {
+  var that = this;
+
+  this.name = "Create shape";
+  this.id = "newshape";
+  this.icon = "M";
+
+  this.init = function() { }
+  this.close = function() { }
+
+  this.mousedown = function(evt, pt) {
+    if (evt.button != 0) return false;
+
+    var shape = {orgX: Math.round(pt.x), orgY: Math.round(pt.y), segments: []};
+    var shapenum = drawingShapes.push(shape) - 1;
+    drawingHandles.push({type: "move", x: shape.orgX, y: shape.orgY, shape: shapenum})
+    currentShape = shapenum;
+    repaint();
+    switchTool("line");
+    return false;
+  }
+  this.mousemove = function(evt, pt) { }
+  this.mouseup = function(evt, pt) { }
+}
+
 function AppendLineTool() {
   var that = this;
 
   this.name = "Add lines";
+  this.id = "line";
   this.icon = "L";
 
   this.init = function() { }
@@ -328,10 +356,61 @@ function AppendLineTool() {
 var tools = [
   panTool,
   new MoveShapeTool,
+  new CreateShapeTool,
   new AppendLineTool
 ];
-var currentTool = 2;
+var currentTool = 3;
 var capturedTool = null;
+
+var toolbar;
+function switchTool(newTool) {
+  if (typeof newTool == "string" || newTool instanceof String) {
+    for (var ti = 0; ti < tools.length; ti++) {
+      if (tools[ti].id == newTool) {
+        newTool = ti;
+        break;
+      }
+    }
+    if (typeof newTool != "number")
+      throw "Invalid tool id: " + newTool;
+  }
+
+  if (newTool < 0 || newTool >= tools.length)
+    throw "Tool number out of range: " + newTool;
+
+  tools[currentTool].close();
+  currentTool = newTool;
+  tools[currentTool].init();
+  toolbar.updateActiveButton();
+}
+
+
+// Toolbar
+
+var toolbar = new (function() {
+  // Set up toolbar
+  var toolbar = document.getElementById("thetoolbar");
+  this.buttons = [];
+  var buttons = this.buttons;
+  tools.forEach(function(tool, toolnum) {
+    var button = document.createElement("a");
+    button.className = "toolbutton";
+    button.setAttribute("title", tool.name);
+    button.innerHTML = tool.icon;
+    button.addEventListener("click", function() {
+      switchTool(toolnum);
+    });
+    toolbar.appendChild(button);
+    buttons.push(button);
+  });
+
+  this.updateActiveButton = function() {
+    buttons.forEach(function (button, idx) {
+      button.classList.toggle("active", currentTool==idx);
+    });
+  };
+  this.updateActiveButton();
+})();
 
 
 // Canvas-related event handlers
@@ -430,6 +509,12 @@ window.addEventListener("keydown", function (evt) {
     // space, reset view
     currentViewMatrix = [1, 0, 0, 1, 0, 0];
     repaint();
+  }
+  else if (evt.keyCode >= 48 && evt.keyCode <= 58) {
+    // number key, switch tool
+    var toolid = evt.keyCode - 49;
+    if (toolid < 0) toolid += 10;
+    switchTool(toolid);
   }
 }, true);
 
