@@ -2,6 +2,13 @@
 
 // Global: The canvas we're working on
 var thecanvas = document.createElement("canvas");
+if (!(thecanvas instanceof HTMLCanvasElement)) {
+  document.getElementById("canvascontainer").innerHTML = "Your browser doesn't seem to support Canvas. Get a better browser.";
+  throw "Missing Canvas support";
+} else {
+  document.getElementById("canvascontainer").innerHTML = "";
+  document.getElementById("canvascontainer").appendChild(thecanvas);
+}
 var ctx = thecanvas.getContext("2d");
 
 // Global: The current document
@@ -543,10 +550,6 @@ document.getElementById("button-load-ass").addEventListener("click", function (e
 // Main
 
 (function() {
-  var canvascontainer = document.getElementById("canvascontainer");
-  while (canvascontainer.firstChild)
-    canvascontainer.removeChild(canvascontainer.firstChild);
-  canvascontainer.appendChild(thecanvas);
   drawingShapes = stringToDrawing("m 100 100 l 100 200 200 200 b 300 200 300 100 200 100 m 300 300 l 320 360 360 320");
   drawingHandles = collectHandles(drawingShapes);
   layoutUI();
