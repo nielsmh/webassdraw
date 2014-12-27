@@ -1,0 +1,72 @@
+* {
+  font-family: 'Segoe UI', 'Tahoma', 'Helvetica', sans-serif;
+}
+
+#sidebarmenu {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 140px;
+  bottom: 0;
+  background: #333;
+  color: #fff;
+  text-align: center;
+}
+#sidebarmenu>h1 {
+  margin: 20px 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+#sidebarmenu>a.button {
+  display: block;
+  text-align: center;
+  margin: 5px 10px;
+  padding: 3px 5px;
+  border: 1px solid #ddd;
+  background: #666;
+  cursor: pointer;
+  font-size: 12px;
+}
+#sidebarmenu>a.button:hover {
+  background: #888;
+}
+#sidebarmenu>hr {
+  border: none;
+  height: 2px;
+}
+#sidebarmenu>.tips {
+  font-size: 10px;
+  margin: 5px 10px;
+}
+
+#canvascontainer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 140px;
+  bottom: 120px;
+  background: #eee;
+  color: black;
+}
+#canvascontainer>canvas {
+  background: white;
+}
+
+#shapesbar {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  height: 120px;
+  right: 140px;
+  background: #444;
+}
+
+#modalbackground {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(128,128,128,0.5);
+  background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKAQMAAAC3/F3+AAAABlBMVEX///8AAABVwtN+AAAAAnRSTlNVVapewVIAAAAQSURBVAjXY1jVwBDqgIsEAIgOCLwGzrv0AAAAAElFTkSuQmCC');
+}
