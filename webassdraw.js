@@ -225,10 +225,18 @@ function repaint() {
     }
 
     ctx.beginPath();
-    if (h.t == HandleType.ORIGIN || h.t == HandleType.LINE || h.t == HandleType.BEZIEREND)
-      ctx.rect(h.x-2.5/vm[0], h.y-2.5/vm[3], 6/vm[0], 6/vm[3]);
+    if (h.t == HandleType.LINE || h.t == HandleType.BEZIEREND)
+      ctx.rect(h.x-2.5/vm[0], h.y-2.5/vm[3], 5/vm[0], 5/vm[3]);
     else if (h.t == HandleType.BEZIERCONTROL1 || h.t == HandleType.BEZIERCONTROL2)
       ctx.arc(h.x-0.5/vm[0], h.y-0.5/vm[0], 3/vm[0], 0, 2*Math.PI);
+    else if (h.t == HandleType.ORIGIN) {
+      ctx.beginPath();
+      ctx.moveTo(h.x-3/vm[0], h.y);
+      ctx.lineTo(h.x, h.y-3/vm[3]);
+      ctx.lineTo(h.x+3/vm[0], h.y);
+      ctx.lineTo(h.x, h.y+3/vm[3]);
+      ctx.closePath();
+    }
     ctx.fill();
     ctx.stroke();
   });
