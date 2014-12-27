@@ -414,7 +414,10 @@ var toolbar = new (function() {
 
   this.updateActiveButton = function() {
     buttons.forEach(function (button, idx) {
-      button.classList.toggle("active", currentTool==idx);
+      if (currentTool==idx)
+        button.classList.add("active");
+      else
+        button.classList.remove("active");
     });
   };
 })();
