@@ -406,11 +406,62 @@ function AppendLineTool() {
   this.mouseup = function(evt, pt) { }
 }
 
+function MoveHandleTool() {
+  var that = this;
+
+  var dragstart, handle;
+
+  this.name = "Move handles";
+  this.id = "movehandle";
+  this.icon = "m";
+
+  this.init = function() {
+    dragstart = null;
+    handle = null;
+  }
+  this.close = function() { }
+
+  this.mousedown = function(evt, pt) {
+    if (evt.button != 0) return false;
+
+    // find a handle to drag
+    var maxDistSqr = Math.pow(3/currentViewMatrix[0], 2);
+    var handles = drawing.shapes[currentShape].handles;
+    for (var hi = 0; hi < handles.length; hi++) {
+      var h = handles[hi];
+      var distSqr = Math.pow(h.x-pt.x, 2) + Math.pow(h.y-pt.y, 2);
+      if (distSqr < maxDistSqr) {
+        dragstart = pt;
+        handle = h;
+        return true;
+      }
+    }
+
+    return false;
+  }
+  this.mousemove = function(evt, pt) {
+    if (dragstart) {
+      handle.x += pt.x - dragstart.x;
+      handle.y += pt.y - dragstart.y;
+      dragstart = pt;
+      repaint();
+    }
+  }
+  this.mouseup = function(evt, pt) {
+    if (dragstart && evt.button == 0) {
+      dragstart = null;
+      handle = null;
+    }
+    return false;
+  }
+}
+
 var tools = [
   panTool,
   new MoveShapeTool,
   new CreateShapeTool,
-  new AppendLineTool
+  new AppendLineTool,
+  new MoveHandleTool
 ];
 var currentTool = null;
 var capturedTool = null;
