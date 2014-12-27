@@ -58,7 +58,38 @@
   bottom: 0;
   height: 120px;
   right: 140px;
-  background: #444;
+  background: #555;
+  overflow: hidden;
+}
+#shapesbar>h2 {
+  color: #999;
+  margin: 5px 10px;
+  display: inline-block;
+  font-size: 22px;
+  font-weight: 800;
+  transform: rotate(270deg);
+  height: 25px;
+  width: 25px;
+  vertical-align: bottom;
+}
+#shapesbar a.shape {
+  vertical-align: top;
+  margin: 5px 2px;
+  display: inline-block;
+  border: 1px solid black;
+  width: 90px;
+  height: 90px;
+  padding: 4px;
+  cursor: pointer;
+  background: white;
+  font-size: 10px;
+}
+#shapesbar a.shape:hover {
+  background: #ccf;
+}
+#shapesbar a.shape.active {
+  border: 3px solid black;
+  padding: 2px;
 }
 
 #modalbackground {
