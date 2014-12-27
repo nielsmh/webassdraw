@@ -345,8 +345,11 @@ function MoveShapeTool() {
   }
   this.mousemove = function(evt, pt) {
     if (evt.button == 0 || (evt.buttons & 1)) {
-      // todo: offset active shape by difference between pt and dragstart
+      var dx = pt.x - dragstart.x;
+      var dy = pt.y - dragstart.y;
       dragstart = pt;
+      drawing.shapes[currentShape].translate(dx, dy);
+      repaint();
     }
   }
   this.mouseup = function(evt, pt) {
