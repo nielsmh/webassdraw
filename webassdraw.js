@@ -12,10 +12,7 @@ if (!(thecanvas instanceof HTMLCanvasElement)) {
 var ctx = thecanvas.getContext("2d");
 
 // Global: The current document
-// Shapes the drawing consists of
-var drawingShapes = new Array();
-// Grabbable handles in the drawing
-var drawingHandles = new Array();
+var drawing = null;
 
 // Global: UI state
 var currentShape = 0;
@@ -24,60 +21,63 @@ var panDragStartPoint = null;
 var currentViewMatrix = [1, 0, 0, 1, 0, 0]; // Canvas.setTransform order
 
 
-// Functions to load and save drawings in ASS format
+// Object for handling drawings
 
-function drawingToString(drawing) {
+var HandleType = {
+  ORIGIN: 0,
+  LINE: 1,
+  BEZIEREND: 2,
+  BEZIERCONTROL1: 3,
+  BEZIERCONTROL2: 4
+};
+
+function Drawing() {
+  // Shapes is an array of Drawing.Shape objects
+  this.shapes = [];
+}
+Drawing.prototype.toString = function () {
   var str = "";
-  for (var si = 0; si < drawing.length; si++) {
-    var shape = drawing[si];
-    str += " m " + shape.orgX + " " + shape.orgY;
-    var lastSegmentType = "";
-    for (var sj = 0; sj < shape.segments.length; sj++) {
-      var segment = shape.segments[sj];
-      if (lastSegmentType != segment.type) {
-        str += " " + segment.type[0];
-        lastSegmentType = segment.type;
-      }
-      if (segment.type == "line")
-        str += " " + segment.x + " " + segment.y;
-      else if (segment.type == "bezier")
-        str += " " + segment.x1 + " " + segment.y1 + " " + segment.x2 + " " + segment.y2 + " " + segment.x3 + " " + segment.y3;
-    }
-  }
+  this.shapes.forEach(function (shape) {
+    str += shape.toString().trim() + " ";
+  });
   return str.trim();
 }
-
-function stringToDrawing(str) {
+Drawing.prototype.addShape = function (orgX, orgY) {
+  var shape = new Drawing.Shape(orgX, orgY);
+  this.shapes.push(shape);
+  return shape;
+}
+Drawing.parse = function (str) {
   var reMove = /^\s*m\s*(-?\d+)\s+(-?\d+)/;
   var reLine = /^\s*l\s*(-?\d+)\s+(-?\d+)/;
   var reLineExt = /^\s+(-?\d+)\s+(-?\d+)/;
   var reBezier = /^\s*b\s*(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)/;
   var reBezierExt = /^\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)/;
 
+  var drawing = new Drawing;
+
   var last = "";
   var eaten = 0;
-  var drawing = new Array();
   var shape = null;
   while (str.length > 0) {
     var ps;
     if (ps = str.match(reMove)) {
-      shape = {orgX: parseInt(ps[1]), orgY: parseInt(ps[2]), segments: []};
-      drawing.push(shape);
+      shape = drawing.addShape(parseInt(ps[1], 10), parseInt(ps[2], 10));
       last = "m";
     }
     else if (shape == null) {
       throw "Malformed drawing string, does not start with a Move command";
     }
     else if (ps = str.match(reLine) || last == "l" && (ps = str.match(reLineExt))) {
-      shape.segments.push({type: "line", x: parseInt(ps[1], 10), y: parseInt(ps[2], 10)});
+      shape.addLine(parseInt(ps[1], 10), parseInt(ps[2], 10));
       last = "l";
     }
     else if (ps = str.match(reBezier) || last == "b" && (ps == str.match(reBezierExt))) {
-      shape.segments.push({type: "bezier",
-        x1: parseInt(ps[1], 10), y1: parseInt(ps[2], 10),
-        x2: parseInt(ps[3], 10), y2: parseInt(ps[4], 10),
-        x3: parseInt(ps[5], 10), y3: parseInt(ps[6], 10),
-      });
+      shape.addBezier(
+        parseInt(ps[1], 10), parseInt(ps[2], 10),
+        parseInt(ps[3], 10), parseInt(ps[4], 10),
+        parseInt(ps[5], 10), parseInt(ps[6], 10)
+      );
       last = "b";
     }
     else {
@@ -89,25 +89,80 @@ function stringToDrawing(str) {
 
   return drawing;
 }
-
-function collectHandles(drawing) {
-  var handles = new Array();
-  for (var si = 0; si < drawing.length; si++) {
-    var shape = drawing[si];
-    handles.push({type: "move", x: shape.orgX, y: shape.orgY, shape: si});
-    for (var sj = 0; sj < shape.segments.length; sj++) {
-      var segment = shape.segments[sj];
-      if (segment.type == "line") {
-        handles.push({type: "line", x: segment.x, y: segment.y, shape: si, segment: sj});
-      }
-      else if (segment.type == "bezier") {
-        handles.push({type: "bezierControl", x: segment.x1, y: segment.y1, shape: si, segment: sj, point: 1});
-        handles.push({type: "bezierControl", x: segment.x2, y: segment.y2, shape: si, segment: sj, point: 2});
-        handles.push({type: "bezierEnd", x: segment.x3, y: segment.y3, shape: si, segment: sj});
-      }
+Drawing.Shape = function(orgX, orgY) {
+  // Handles is an array of {t,x,y} objects
+  // t is type, see HandleType above
+  // x and y are coordinates for the handle
+  // One handle represents one coordinate vector involved in the shape
+  this.handles = [{t: HandleType.ORIGIN, x: orgX, y: orgY}];
+  // Segments is an array of numbers
+  // The numbers are indices into the handles array
+  // Each entry in segments indicates where a segment begins
+  this.segments = [0];
+}
+Drawing.Shape.prototype.toString = function() {
+  var letters = ["m", "l", "b", "b", "b"]; // order as HandleType values
+  var str = "";
+  var prevtype;
+  this.handles.forEach(function (h) {
+    if (h.t != prevtype) {
+      str += " " + letters[h.t];
+      prevtype = h.t;
     }
+    str += " " + h.x + " " + h.y;
+  });
+  return str;
+}
+Drawing.Shape.prototype.addLine = function (x, y) {
+  this.segments.push(this.handles.length);
+  this.handles.push({t: HandleType.LINE, x: x, y: y});
+}
+Drawing.Shape.prototype.addBezier = function (x1, y1, x2, y2, x3, y3) {
+  this.segments.push(this.handles.length);
+  this.handles.push({t: HandleType.BEZIERCONTROL1, x: x1, y: y1});
+  this.handles.push({t: HandleType.BEZIERCONTROL2, x: x2, y: y2});
+  this.handles.push({t: HandleType.BEZIEREND,      x: x3, y: y3});
+}
+Drawing.Shape.prototype.removeSegment = function (segmentIdx) {
+  var handleIdx = this.segments[segmentIdx];
+  if (typeof handleIdx == "undefined")
+    throw "Invalid segment index";
+  var segmentType = this.handles[handleIdx];
+  var segmentLength = 1;
+  if (segmentType == HandleType.ORIGIN)
+    throw "Cannot remove origin segment";
+  if (segmentType == HandleType.BEZIERCONTROL1)
+    segmentLength = 3;
+  if (segmentType == HandleType.BEZIERCONTROL2 || segmentType == HandleType.BEZIEREND)
+    throw "Segment pointing to middle of bezier definition, shape data corrupt";
+  this.segments.splice(segmentIdx, 1);
+  return this.handles.splice(handleIdx, segmentLength);
+}
+Drawing.Shape.prototype.translate = function (dx, dy) {
+  this.handles.forEach(function (h) {
+    h.x += dx;
+    h.y += dy;
+  });
+}
+Drawing.Shape.prototype.draw = function (ctx, doClose) {
+  ctx.beginPath();
+  var hi;
+  var bc1, bc2;
+  for (hi = 0; hi < this.handles.length; hi++) {
+    var h = this.handles[hi];
+    if (h.t == HandleType.ORIGIN)
+      ctx.moveTo(h.x, h.y);
+    else if (h.t == HandleType.LINE)
+      ctx.lineTo(h.x, h.y);
+    else if (h.t == HandleType.BEZIERCONTROL1)
+      bc1 = h;
+    else if (h.t == HandleType.BEZIERCONTROL2)
+      bc2 = h;
+    else if (h.t == HandleType.BEZIEREND)
+      ctx.bezierCurveTo(bc1.x, bc1.y, bc2.x, bc2.y, h.x, h.y);
   }
-  return handles;
+  if (doClose)
+    ctx.closePath();
 }
 
 
@@ -116,6 +171,9 @@ function collectHandles(drawing) {
 function repaint() {
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, thecanvas.width, thecanvas.height);
+
+  if (!drawing)
+    return;
 
   var vm = currentViewMatrix;
 
@@ -135,39 +193,26 @@ function repaint() {
       ctx.fillStyle = "#abc";
     }
 
-    ctx.beginPath();
-    ctx.moveTo(shape.orgX, shape.orgY);
-    for (var sj = 0; sj < shape.segments.length; sj++) {
-      var segment = shape.segments[sj];
-      if (segment.type == "line")
-        ctx.lineTo(segment.x, segment.y);
-      else if (segment.type == "bezier")
-        ctx.bezierCurveTo(segment.x1, segment.y1, segment.x2, segment.y2, segment.x3, segment.y3);
-    }
-    ctx.closePath();
+    shape.draw(ctx, true);
     ctx.stroke();
     ctx.fill("evenodd");
   }
   // draw other shapes first, then the current one on top
-  for (var si = 0; si < drawingShapes.length; si++) {
-    var shape = drawingShapes[si];
+  drawing.shapes.forEach(function (shape, si) {
     if (si != currentShape)
       drawShape(shape, false);
-  }
-  drawShape(drawingShapes[currentShape], true);
+  });
+  drawShape(drawing.shapes[currentShape], true);
 
   // draw handles
   if (mousePos.x == null) return
   ctx.lineWidth = 1/vm[0];
   var maxDistSqr = Math.pow(110/vm[0], 2);
   var grabDistSqr = Math.pow(4/vm[0], 2);
-  for (var hi = 0; hi < drawingHandles.length; hi++) {
-    var handle = drawingHandles[hi];
-    if (handle.shape != currentShape)
-      continue;
-    var handleDistSqr = Math.pow(handle.x-mousePos.x, 2) + Math.pow(handle.y-mousePos.y, 2);
+  drawing.shapes[currentShape].handles.forEach(function (h) {
+    var handleDistSqr = Math.pow(h.x-mousePos.x, 2) + Math.pow(h.y-mousePos.y, 2);
     if (handleDistSqr > maxDistSqr)
-      continue;
+      return;
 
     if (handleDistSqr <= grabDistSqr) {
       ctx.fillStyle = "rgba(150,250,250,0.9)";
@@ -179,13 +224,13 @@ function repaint() {
     }
 
     ctx.beginPath();
-    if (handle.type == "move" || handle.type == "line" || handle.type == "bezierEnd")
-      ctx.rect(handle.x-2.5/vm[0], handle.y-2.5/vm[3], 6/vm[0], 6/vm[3]);
-    else if (handle.type == "bezierControl")
-      ctx.arc(handle.x-0.5/vm[0], handle.y-0.5/vm[0], 3/vm[0], 0, 2*Math.PI);
+    if (h.t == HandleType.ORIGIN || h.t == HandleType.LINE || h.t == HandleType.BEZIEREND)
+      ctx.rect(h.x-2.5/vm[0], h.y-2.5/vm[3], 6/vm[0], 6/vm[3]);
+    else if (h.t == HandleType.BEZIERCONTROL1 || h.t == HandleType.BEZIERCONTROL2)
+      ctx.arc(h.x-0.5/vm[0], h.y-0.5/vm[0], 3/vm[0], 0, 2*Math.PI);
     ctx.fill();
     ctx.stroke();
-  }
+  });
 }
 
 function layoutUI() {
@@ -325,12 +370,11 @@ function CreateShapeTool() {
   this.mousedown = function(evt, pt) {
     if (evt.button != 0) return false;
 
-    var shape = {orgX: Math.round(pt.x), orgY: Math.round(pt.y), segments: []};
-    var shapenum = drawingShapes.push(shape) - 1;
-    drawingHandles.push({type: "move", x: shape.orgX, y: shape.orgY, shape: shapenum})
+    var shape = drawing.addShape(Math.round(pt.x), Math.round(pt.y))
+    var shapenum = drawing.shapes.length - 1;
     currentShape = shapenum;
-    repaint();
     switchTool("line");
+    repaint();
     return false;
   }
   this.mousemove = function(evt, pt) { }
@@ -350,9 +394,7 @@ function AppendLineTool() {
   this.mousedown = function(evt, pt) {
     if (evt.button != 0) return false;
 
-    var segment = {type: "line", x: Math.round(pt.x), y: Math.round(pt.y)};
-    var shapenum = drawingShapes[currentShape].segments.push(segment) - 1;
-    drawingHandles.push({type: "line", x: segment.x, y: segment.y, shape: currentShape, segment: shapenum})
+    drawing.shapes[currentShape].addLine(Math.round(pt.x), Math.round(pt.y));
     repaint();
     return false;
   }
@@ -508,10 +550,10 @@ window.addEventListener("keydown", function (evt) {
     // tab, switch active shape
     eat();
     if (!evt.shiftKey) {
-      currentShape = (currentShape + 1) % drawingShapes.length;
+      currentShape = (currentShape + 1) % drawing.shapes.length;
     }
     else {
-      currentShape = (currentShape + drawingShapes.length - 1) % drawingShapes.length;
+      currentShape = (currentShape + drawings.shapes.length - 1) % drawing.shapes.length;
     }
     repaint();
   }
@@ -532,16 +574,13 @@ window.addEventListener("keydown", function (evt) {
 // Sidebar menu event handlers
 
 document.getElementById("button-export-ass").addEventListener("click", function (evt) {
-  alert(drawingToString(drawingShapes));
+  alert(drawing.toString());
 });
 document.getElementById("button-load-ass").addEventListener("click", function (evt) {
   var str = prompt("Drawing string to load", "");
   if (!str) return;
-  var drawing;
   try {
-    drawing = stringToDrawing(str);
-    drawingShapes = drawing;
-    drawingHandles = collectHandles(drawingShapes);
+    drawing = Drawing.parse(str);
     repaint();
   }
   catch (e) {
@@ -553,8 +592,7 @@ document.getElementById("button-load-ass").addEventListener("click", function (e
 // Main
 
 (function() {
-  drawingShapes = stringToDrawing("m 100 100 l 100 200 200 200 b 300 200 300 100 200 100 m 300 300 l 320 360 360 320");
-  drawingHandles = collectHandles(drawingShapes);
+  drawing = Drawing.parse("m 100 100 l 100 200 200 200 b 300 200 300 100 200 100 m 300 300 l 320 360 360 320");
   layoutUI();
   switchTool("pan");
 })();
