@@ -359,7 +359,7 @@ var tools = [
   new CreateShapeTool,
   new AppendLineTool
 ];
-var currentTool = 3;
+var currentTool = null;
 var capturedTool = null;
 
 var toolbar;
@@ -378,7 +378,8 @@ function switchTool(newTool) {
   if (newTool < 0 || newTool >= tools.length)
     throw "Tool number out of range: " + newTool;
 
-  tools[currentTool].close();
+  if (tools[currentTool])
+    tools[currentTool].close();
   currentTool = newTool;
   tools[currentTool].init();
   toolbar.updateActiveButton();
@@ -409,7 +410,6 @@ var toolbar = new (function() {
       button.classList.toggle("active", currentTool==idx);
     });
   };
-  this.updateActiveButton();
 })();
 
 
@@ -550,4 +550,5 @@ document.getElementById("button-load-ass").addEventListener("click", function (e
   drawingShapes = stringToDrawing("m 100 100 l 100 200 200 200 b 300 200 300 100 200 100 m 300 300 l 320 360 360 320");
   drawingHandles = collectHandles(drawingShapes);
   layoutUI();
+  switchTool("pan");
 })();
