@@ -150,6 +150,7 @@ function repaint() {
   drawShape(drawingShapes[currentShape], true);
 
   // draw handles
+  if (mousePos.x == null) return
   ctx.lineWidth = 1/vm[0];
   var maxDistSqr = Math.pow(110/vm[0], 2);
   var grabDistSqr = Math.pow(4/vm[0], 2);
@@ -219,6 +220,120 @@ var modalbackground = new (function() {
 })();
 
 
+// Tools
+
+function PanTool() {
+  var that = this;
+
+  var panbutton = null;
+  var panstart = null;
+
+  this.name = "Pan";
+  this.icon = "P";
+
+  this.init = function() {
+    // Tool was selected
+    panbutton = null;
+    panstart = null;
+  }
+  this.close = function() {
+    // Tool was deselected
+  }
+
+  this.mousedown = function(evt, pt) {
+    // Pressed down button
+    // evt is original mouse event, pt is drawing coordinate point
+    if (panstart) return true;
+    panbutton = evt.button;
+    panstart = {x: evt.clientX, y: evt.clientY};
+    return true;
+  }
+  this.mousemove = function(evt, pt) {
+    // Moving mouse
+    if (panstart) {
+      var dx = evt.clientX - panstart.x;
+      var dy = evt.clientY - panstart.y;
+      panstart = {x: evt.clientX, y: evt.clientY};
+      currentViewMatrix[4] += dx;
+      currentViewMatrix[5] += dy;
+      repaint();
+    }
+  }
+  this.mouseup = function(evt, pt) {
+    // Released mouse button
+    if (panstart && evt.button == panbutton) {
+      panstart = null;
+      panbutton = null;
+      return false;
+    }
+  }
+}
+var panTool = new PanTool;
+
+function MoveShapeTool() {
+  var that = this;
+
+  var dragstart = null;
+
+  this.name = "Move shape";
+  this.icon = "D";
+
+  this.init = function() {
+    dragstart = null;
+  }
+  this.close = function() { }
+
+  this.mousedown = function(evt, pt) {
+    if (evt.button == 0) {
+      dragstart = pt;
+      return true;
+    }
+  }
+  this.mousemove = function(evt, pt) {
+    if (evt.button == 0 || (evt.buttons & 1)) {
+      // todo: offset active shape by difference between pt and dragstart
+      dragstart = pt;
+    }
+  }
+  this.mouseup = function(evt, pt) {
+    if (evt.button == 0) {
+      dragstart = null;
+      return false;
+    }
+  }
+}
+
+function AppendLineTool() {
+  var that = this;
+
+  this.name = "Add lines";
+  this.icon = "L";
+
+  this.init = function() { }
+  this.close = function() { }
+
+  this.mousedown = function(evt, pt) {
+    if (evt.button != 0) return false;
+
+    var segment = {type: "line", x: Math.round(pt.x), y: Math.round(pt.y)};
+    var shapenum = drawingShapes[currentShape].segments.push(segment) - 1;
+    drawingHandles.push({type: "line", x: segment.x, y: segment.y, shape: currentShape, segment: shapenum})
+    repaint();
+    return false;
+  }
+  this.mousemove = function(evt, pt) { }
+  this.mouseup = function(evt, pt) { }
+}
+
+var tools = [
+  panTool,
+  new MoveShapeTool,
+  new AppendLineTool
+];
+var currentTool = 2;
+var capturedTool = null;
+
+
 // Canvas-related event handlers
 
 window.addEventListener("resize", function (evt) {
@@ -237,49 +352,38 @@ function canvasPointFromMouseEvent(evt) {
 }
 
 thecanvas.addEventListener("mousedown", function (evt) {
-  var p = canvasPointFromMouseEvent(evt);
+  var pt = canvasPointFromMouseEvent(evt);
   if (evt.button == 2) {
-    // begin panning
-    panDragStartPoint = {x: evt.clientX, y: evt.clientY};
-    mousePos = {};
-    repaint();
+    if (panTool.mousedown(evt, pt))
+      capturedTool = panTool;
   }
-  else if (evt.button == 0) {
-    // left click, place point (for now)
-    drawingShapes[currentShape].segments.push({type: "line", x: Math.round(p.x), y: Math.round(p.y)});
-    drawingHandles = collectHandles(drawingShapes);
-    repaint();
+  else {
+    if (tools[currentTool].mousedown(evt, pt))
+      capturedTool = tools[currentTool];
   }
 }, true);
 
 thecanvas.addEventListener("mousemove", function (evt) {
-  var p = canvasPointFromMouseEvent(evt);
-  if (evt.buttons == 2 || evt.button == 2) {
-    // dragging to pan
-    currentViewMatrix[4] += (evt.clientX - panDragStartPoint.x);
-    currentViewMatrix[5] += (evt.clientY - panDragStartPoint.y);
-    panDragStartPoint = {x: evt.clientX, y: evt.clientY};
-    repaint();
+  var pt = canvasPointFromMouseEvent(evt);
+  if (capturedTool) {
+    capturedTool.mousemove(evt, pt);
   }
   else {
-    // no buttons being held, update
-    mousePos = p;
+    // no tool active
+    mousePos = pt;
     repaint();
   }
 }, true);
 
 thecanvas.addEventListener("mouseup", function (evt) {
-  var p = canvasPointFromMouseEvent(evt);
-  if (evt.button == 2) {
-    // middle click, end panning
-    panDragStartPoint = null;
-    mousePos = p;
-    repaint();
-    evt.preventDefault();
-    evt.stopPropagation();
+  var pt = canvasPointFromMouseEvent(evt);
+  if (capturedTool) {
+    if (Boolean(capturedTool.mouseup(evt, pt)) != true)
+      capturedTool = null;
   }
 }, true);
 thecanvas.addEventListener("contextmenu", function (evt) {
+  // Prevent context menu on the canvas
   evt.preventDefault();
   evt.stopPropagation();
 }, true);
