@@ -195,18 +195,22 @@ function repaint() {
     }
 
     shape.draw(ctx, true);
-    ctx.stroke();
+    if (currentTool != 0)
+      ctx.stroke();
     ctx.fill("evenodd");
   }
   // draw other shapes first, then the current one on top
   drawing.shapes.forEach(function (shape, si) {
-    if (si != currentShape)
+    if (si != currentShape || currentTool == 0)
       drawShape(shape, false);
   });
-  drawShape(drawing.shapes[currentShape], true);
+  if (currentTool != 0) {
+    drawShape(drawing.shapes[currentShape], true);
+  }
 
   // draw handles
-  if (mousePos.x == null) return
+  if (mousePos.x == null) return;
+  if (currentTool == 0) return;
   ctx.lineWidth = 1/vm[0];
   var maxDistSqr = Math.pow(110/vm[0], 2);
   var grabDistSqr = Math.pow(4/vm[0], 2);
@@ -523,6 +527,7 @@ function switchTool(newTool) {
   currentTool = newTool;
   tools[currentTool].init();
   toolbar.updateActiveButton();
+  repaint();
 }
 
 
