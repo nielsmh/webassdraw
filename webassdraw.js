@@ -537,7 +537,6 @@ function canvasPointFromMouseEvent(evt) {
     x: (x - vm[4]) / vm[0],
     y: (y - vm[5]) / vm[3]
   };
-  document.getElementById("debugview").innerHTML = p.x + ' ' + p.y
   return p;
 }
 
