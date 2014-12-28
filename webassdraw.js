@@ -413,6 +413,36 @@ function AppendLineTool() {
   this.mouseup = function(evt, pt) { }
 }
 
+function AppendBezierTool() {
+  var that = this;
+
+  this.name = "Add beziers";
+  this.id = "bezier";
+  this.icon = "B";
+
+  this.init = function() { }
+  this.close = function() { }
+
+  this.mousedown = function(evt, pt) {
+    if (evt.button != 0) return false;
+
+    var shape = drawing.shapes[currentShape];
+    var ph = shape.handles[shape.handles.length-1];
+    var vx = pt.x - ph.x;
+    var vy = pt.y - ph.y;
+
+    var x1 = Math.round(ph.x + vx/3), y1 = Math.round(ph.y + vy/3);
+    var x2 = Math.round(ph.x + vx/3*2), y2 = Math.round(ph.y + vy/3*2);
+    var x3 = Math.round(pt.x), y3 = Math.round(pt.y);
+
+    shape.addBezier(x1, y1, x2, y2, x3, y3);
+    repaint();
+    return false;
+  }
+  this.mousemove = function(evt, pt) { }
+  this.mouseup = function(evt, pt) { }
+}
+
 function MoveHandleTool() {
   var that = this;
 
@@ -466,6 +496,7 @@ var tools = [
   new MoveShapeTool,
   new CreateShapeTool,
   new AppendLineTool,
+  new AppendBezierTool,
   moveHandleTool
 ];
 var currentTool = null;
