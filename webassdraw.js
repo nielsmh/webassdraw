@@ -168,6 +168,7 @@ Drawing.Shape.prototype.draw = function (ctx, doClose) {
 
 // Painting the drawing and widgets on the canvas
 
+var tools, capturedTool, currentTool;
 function repaint() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = "white";
@@ -176,6 +177,10 @@ function repaint() {
   if (!drawing)
     return;
 
+  var tool = tools[currentTool];
+  if (capturedTool) tool = capturedTool;
+  if (!tool) debugger;
+
   var vm = currentViewMatrix;
 
   ctx.setTransform.apply(ctx, vm);
@@ -183,7 +188,7 @@ function repaint() {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   function drawShape(shape, isCurrent) {
-    if (isCurrent) {
+    if (isCurrent && !tool.showFlattenedShape) {
       ctx.lineWidth = 2/vm[0];
       ctx.strokeStyle = "black";
       ctx.fillStyle = "#8a8";
@@ -195,22 +200,20 @@ function repaint() {
     }
 
     shape.draw(ctx, true);
-    if (currentTool != 0)
+    if (!tool.showFlattenedShape)
       ctx.stroke();
     ctx.fill("evenodd");
   }
   // draw other shapes first, then the current one on top
   drawing.shapes.forEach(function (shape, si) {
-    if (si != currentShape || currentTool == 0)
+    if (si != currentShape)
       drawShape(shape, false);
   });
-  if (currentTool != 0) {
-    drawShape(drawing.shapes[currentShape], true);
-  }
+  drawShape(drawing.shapes[currentShape], true);
 
   // draw handles
   if (mousePos.x == null) return;
-  if (currentTool == 0) return;
+  if (tool.hideHandles) return;
   ctx.lineWidth = 1/vm[0];
   var maxDistSqr = Math.pow(110/vm[0], 2);
   var grabDistSqr = Math.pow(4/vm[0], 2);
@@ -306,6 +309,9 @@ function PanTool() {
     // Tool was deselected
   }
 
+  this.hideHandles = true;
+  this.showFlattenedShape = true;
+
   this.mousedown = function(evt, pt) {
     // Pressed down button
     // evt is original mouse event, pt is drawing coordinate point
@@ -349,6 +355,9 @@ function MoveShapeTool() {
   }
   this.close = function() { }
 
+  this.hideHandles = true;
+  this.showFlattenedShape = false;
+
   this.mousedown = function(evt, pt) {
     if (evt.button == 0) {
       dragstart = pt;
@@ -382,6 +391,9 @@ function CreateShapeTool() {
   this.init = function() { }
   this.close = function() { }
 
+  this.hideHandles = true;
+  this.showFlattenedShape = true;
+
   this.mousedown = function(evt, pt) {
     if (evt.button != 0) return false;
 
@@ -406,6 +418,9 @@ function AppendLineTool() {
   this.init = function() { }
   this.close = function() { }
 
+  this.hideHandles = false;
+  this.showFlattenedShape = false;
+
   this.mousedown = function(evt, pt) {
     if (evt.button != 0) return false;
 
@@ -426,6 +441,9 @@ function AppendBezierTool() {
 
   this.init = function() { }
   this.close = function() { }
+
+  this.hideHandles = false;
+  this.showFlattenedShape = false;
 
   this.mousedown = function(evt, pt) {
     if (evt.button != 0) return false;
@@ -460,6 +478,9 @@ function MoveHandleTool() {
     handle = null;
   }
   this.close = function() { }
+
+  this.hideHandles = false;
+  this.showFlattenedShape = false;
 
   this.mousedown = function(evt, pt) {
     if (evt.button != 0) return false;
@@ -610,6 +631,7 @@ thecanvas.addEventListener("mouseup", function (evt) {
   if (capturedTool) {
     if (Boolean(capturedTool.mouseup(evt, pt)) != true)
       capturedTool = null;
+    repaint();
   }
 }, true);
 thecanvas.addEventListener("contextmenu", function (evt) {
@@ -654,7 +676,8 @@ window.addEventListener("keydown", function (evt) {
     else {
       currentShape = (currentShape + drawings.shapes.length - 1) % drawing.shapes.length;
     }
-    repaint();
+    // reset the tool state
+    switchTool(currentTool);
   }
   else if (evt.keyCode == 32) {
     // space, reset view
@@ -692,6 +715,6 @@ document.getElementById("button-load-ass").addEventListener("click", function (e
 
 (function() {
   drawing = Drawing.parse("m 100 100 l 100 200 200 200 b 300 200 300 100 200 100 m 300 300 l 320 360 360 320");
-  layoutUI();
   switchTool("pan");
+  layoutUI();
 })();
