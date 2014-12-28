@@ -330,7 +330,6 @@ function PanTool() {
     }
   }
 }
-var panTool = new PanTool;
 
 function MoveShapeTool() {
   var that = this;
@@ -460,12 +459,14 @@ function MoveHandleTool() {
   }
 }
 
+var panTool = new PanTool;
+var moveHandleTool = new MoveHandleTool;
 var tools = [
   panTool,
   new MoveShapeTool,
   new CreateShapeTool,
   new AppendLineTool,
-  new MoveHandleTool
+  moveHandleTool
 ];
 var currentTool = null;
 var capturedTool = null;
@@ -545,6 +546,10 @@ thecanvas.addEventListener("mousedown", function (evt) {
   if (evt.button == 2) {
     if (panTool.mousedown(evt, pt))
       capturedTool = panTool;
+  }
+  else if (evt.shiftKey) {
+    if (moveHandleTool.mousedown(evt, pt))
+      capturedTool = moveHandleTool;
   }
   else {
     if (tools[currentTool].mousedown(evt, pt))
