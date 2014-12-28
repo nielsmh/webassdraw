@@ -514,10 +514,63 @@ function MoveHandleTool() {
   }
 }
 
+function PickShapeTool() {
+  var that = this;
+
+  this.name = "Pick shape";
+  this.id = "pickshape";
+  this.icon = "p";
+
+  var switchBackTool = null;
+  var dragging = false;
+  var canvas = document.createElement("canvas");
+  var ctx = canvas.getContext("2d");
+
+  this.init = function(prevTool) {
+    switchBackTool = prevTool;
+    dragging = false;
+  }
+  this.close = function() { }
+
+  this.hideHandles = true;
+  this.showFlattenedShape = false;
+
+  this.mousedown = function(evt, pt) {
+    if (evt.button != 0) return false;
+
+    dragging = true;
+    return true;
+  }
+  this.mousemove = function(evt, pt) { }
+  this.mouseup = function(evt, pt) {
+    if (!dragging) return false;
+    if (evt.button != 0) return dragging;
+
+    var washit = drawing.shapes.some(function (shape, idx) {
+      shape.draw(ctx, true);
+      if (ctx.isPointInPath(pt.x, pt.y, "evenodd")) {
+        currentShape = idx;
+        return true;
+      }
+    });
+
+    if (washit) {
+      dragging = false;
+      if (switchBackTool)
+        switchTool(switchBackTool);
+      else
+        switchTool("moveshape");
+    }
+    return false;
+  }
+}
+
 var panTool = new PanTool;
+var pickShapeTool = new PickShapeTool;
 var moveHandleTool = new MoveHandleTool;
 var tools = [
   panTool,
+  pickShapeTool,
   new MoveShapeTool,
   new CreateShapeTool,
   new AppendLineTool,
