@@ -13,6 +13,8 @@ var ctx = thecanvas.getContext("2d");
 
 // Global: The current document
 var drawing = null;
+var backgroundPicture = null;
+var enableBackground = true;
 
 // Global: UI state
 var currentShape = 0;
@@ -179,11 +181,16 @@ function repaint() {
 
   var tool = tools[currentTool];
   if (capturedTool) tool = capturedTool;
-  if (!tool) debugger;
 
   var vm = currentViewMatrix;
 
   ctx.setTransform.apply(ctx, vm);
+
+  if (backgroundPicture && enableBackground) {
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(backgroundPicture, 0, 0);
+  }
+  ctx.globalAlpha = 1.0;
 
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -762,6 +769,27 @@ document.getElementById("button-load-ass").addEventListener("click", function (e
   catch (e) {
     alert("Could not load drawing: " + e);
   }
+});
+
+document.getElementById("button-load-background").addEventListener("click", function (evt) {
+  var fileinput = document.createElement("input");
+  fileinput.type = "file";
+  fileinput.onchange =  function (evt) {
+    var img = document.createElement("img");
+    img.src = URL.createObjectURL(fileinput.files[0]);
+    backgroundPicture = img;
+    enableBackground = true;
+    repaint();
+  };
+  fileinput.click();
+});
+document.getElementById("button-reset-background").addEventListener("click", function (evt) {
+  backgroundPicture = null;
+  repaint();
+});
+document.getElementById("button-toggle-background").addEventListener("click", function (evt) {
+  enableBackground = !enableBackground;
+  repaint();
 });
 
 
