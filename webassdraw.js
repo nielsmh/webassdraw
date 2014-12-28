@@ -300,7 +300,7 @@ function PanTool() {
   this.id = "pan";
   this.icon = "P";
 
-  this.init = function() {
+  this.init = function(prevTool) {
     // Tool was selected
     panbutton = null;
     panstart = null;
@@ -350,7 +350,7 @@ function MoveShapeTool() {
   this.id = "moveshape";
   this.icon = "D";
 
-  this.init = function() {
+  this.init = function(prevTool) {
     dragstart = null;
   }
   this.close = function() { }
@@ -388,7 +388,7 @@ function CreateShapeTool() {
   this.id = "newshape";
   this.icon = "M";
 
-  this.init = function() { }
+  this.init = function(prevTool) { }
   this.close = function() { }
 
   this.hideHandles = true;
@@ -415,7 +415,7 @@ function AppendLineTool() {
   this.id = "line";
   this.icon = "L";
 
-  this.init = function() { }
+  this.init = function(prevTool) { }
   this.close = function() { }
 
   this.hideHandles = false;
@@ -439,7 +439,7 @@ function AppendBezierTool() {
   this.id = "bezier";
   this.icon = "B";
 
-  this.init = function() { }
+  this.init = function(prevTool) { }
   this.close = function() { }
 
   this.hideHandles = false;
@@ -474,7 +474,7 @@ function MoveHandleTool() {
   this.id = "movehandle";
   this.icon = "m";
 
-  this.init = function() {
+  this.init = function(prevTool) {
     handle = null;
   }
   this.close = function() { }
@@ -543,10 +543,11 @@ function switchTool(newTool) {
   if (newTool < 0 || newTool >= tools.length)
     throw "Tool number out of range: " + newTool;
 
+  var prevTool = currentTool;
   if (tools[currentTool])
     tools[currentTool].close();
   currentTool = newTool;
-  tools[currentTool].init();
+  tools[currentTool].init(prevTool);
   toolbar.updateActiveButton();
   repaint();
 }
