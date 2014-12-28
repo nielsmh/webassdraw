@@ -417,14 +417,13 @@ function AppendLineTool() {
 function MoveHandleTool() {
   var that = this;
 
-  var dragstart, handle;
+  var handle;
 
   this.name = "Move handles";
   this.id = "movehandle";
   this.icon = "m";
 
   this.init = function() {
-    dragstart = null;
     handle = null;
   }
   this.close = function() { }
@@ -439,7 +438,6 @@ function MoveHandleTool() {
       var h = handles[hi];
       var distSqr = Math.pow(h.x-pt.x, 2) + Math.pow(h.y-pt.y, 2);
       if (distSqr < maxDistSqr) {
-        dragstart = pt;
         handle = h;
         return true;
       }
@@ -448,16 +446,14 @@ function MoveHandleTool() {
     return false;
   }
   this.mousemove = function(evt, pt) {
-    if (dragstart) {
-      handle.x += pt.x - dragstart.x;
-      handle.y += pt.y - dragstart.y;
-      dragstart = pt;
+    if (handle) {
+      handle.x = Math.round(pt.x);
+      handle.y = Math.round(pt.y);
       repaint();
     }
   }
   this.mouseup = function(evt, pt) {
-    if (dragstart && evt.button == 0) {
-      dragstart = null;
+    if (handle && evt.button == 0) {
       handle = null;
     }
     return false;
